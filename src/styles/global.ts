@@ -39,6 +39,8 @@ export const GlobalStyles = createGlobalStyle`
     justify-content: center;
 
     transition: background 200ms;
+
+    overflow: auto;
   }
 
   body,

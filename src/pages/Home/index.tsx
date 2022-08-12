@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 import { v4 } from 'uuid';
 
 import { useInfiniteScroll } from '@hooks/useInfiniteScroll';
-import { useLoadItems } from '@hooks/useLoadItems';
+import { useLoadItems } from '@services/useLoadItems';
 
 import { Container, Item } from './styles';
 
 const Home: React.FC = () => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const { isLoading, data, hasPrevPage, hasNextPage, error, loadMore } =
-    useLoadItems();
+    useLoadItems({ scrollRef });
 
   const [infinitePrevRef] = useInfiniteScroll({
     isLoading,
@@ -27,7 +29,7 @@ const Home: React.FC = () => {
 
   return (
     <div>
-      <Container>
+      <Container ref={scrollRef}>
         {hasPrevPage && <Item ref={infinitePrevRef}>Carregando</Item>}
 
         {data.map(item => {

@@ -1,13 +1,16 @@
 // const { loading, items, hasNextPage, error, loadMore } = useLoadItems();
-import { useState } from 'react';
+import { useEffect, useReducer } from 'react';
 
 import { DateHelper } from '@utils/date';
 import { IData } from '@utils/generateData';
 import { randomIntFromInterval } from '@utils/randomIntFromInterval';
 
-let dataLength = 20;
+import { onData, onError, onLoading } from './actions';
+import { IState, itemsReducer } from './reducer';
 
-const ARRAY_SIZE = 20;
+let dataLength = 100;
+
+const ARRAY_SIZE = 100;
 const RESPONSE_TIME_IN_MS = 1000;
 const colors: string[] = [
   '#FFE066',
@@ -89,33 +92,48 @@ function loadItems(startCursor = 0, direction = 1): Promise<IResponse> {
   });
 }
 
-function useLoadItems() {
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [data, setData] = useState<IData[]>([]);
-  const [hasPrevPage, setHasPrevPage] = useState<boolean>(false);
-  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
-  const [error, setError] = useState<Error>();
+interface IUseLoadItemsProps {
+  scrollRef: React.RefObject<HTMLDivElement>;
+}
+
+function useLoadItems({ scrollRef }: IUseLoadItemsProps) {
+  const [state, dispatch] = useReducer(itemsReducer, {
+    isLoading: false,
+    data: [],
+    hasPrevPage: false,
+    hasNextPage: true,
+    error: undefined,
+    pagination: { page: 0, last: 200 },
+  } as IState);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      if (state.pagination.page > 1) {
+        const { height } = scrollRef.current.getBoundingClientRect();
+
+        scrollRef.current?.scrollTo(0, height / 2 / 2);
+      }
+    }
+  }, [scrollRef, state.pagination.page]);
 
   async function loadMore(direction: number) {
-    setIsLoading(true);
+    dispatch(onLoading());
 
     try {
-      const { newData, newHasPrevPage, newHasNextPage } = await loadItems(
-        direction === 1 ? dataLength - 20 : dataLength - 40,
+      const { newData } = await loadItems(
+        direction === 1 ? dataLength - ARRAY_SIZE : dataLength - ARRAY_SIZE * 2,
         direction,
       );
 
-      setData(state => (newData.length === 0 ? state : newData));
-      setHasPrevPage(newHasPrevPage);
-      setHasNextPage(newHasNextPage);
+      console.log(newData);
+
+      dispatch(onData({ direction, newData }));
     } catch (err) {
-      setError(err as Error);
-    } finally {
-      setIsLoading(false);
+      dispatch(onError());
     }
   }
 
-  return { isLoading, data, hasPrevPage, hasNextPage, error, loadMore };
+  return { ...state, loadMore };
 }
 
 export { useLoadItems };
